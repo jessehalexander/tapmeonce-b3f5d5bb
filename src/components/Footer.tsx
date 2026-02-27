@@ -1,13 +1,12 @@
+import logo from "@/assets/TapMeOnce-Logo.png";
+
 const Footer = () => {
   return (
     <footer className="border-t border-border py-12">
       <div className="container">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-gradient-gold" />
-            <span className="font-display text-lg font-bold text-foreground">
-              TapMe<span className="text-gradient-gold">Once</span>
-            </span>
+          <div className="flex items-center">
+            <img src={logo} alt="TapMeOnce" className="h-8" />
           </div>
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
