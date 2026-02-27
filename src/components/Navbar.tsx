@@ -12,7 +12,7 @@ const Navbar = () => {
     >
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img src={logo} alt="TapMeOnce" className="h-10" />
+          <img src={logo} alt="TapMeOnce" className="h-28" />
         </Link>
 
         <div className="hidden md:flex items-center gap-8">

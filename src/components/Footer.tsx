@@ -6,7 +6,7 @@ const Footer = () => {
       <div className="container">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center">
-            <img src={logo} alt="TapMeOnce" className="h-8" />
+            <img src={logo} alt="TapMeOnce" className="h-20" />
           </div>
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
