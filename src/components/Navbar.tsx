@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import logo from "@/assets/TapMeOnce-Logo.png";
 
 const Navbar = () => {
   return (
@@ -10,11 +11,8 @@ const Navbar = () => {
       className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl"
     >
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-gold" />
-          <span className="font-display text-xl font-bold tracking-tight text-foreground">
-            TapMe<span className="text-gradient-gold">Once</span>
-          </span>
+        <Link to="/" className="flex items-center">
+          <img src={logo} alt="TapMeOnce" className="h-10" />
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
