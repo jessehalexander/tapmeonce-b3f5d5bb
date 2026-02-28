@@ -133,8 +133,8 @@ const HeroSection = () => {
               className="relative w-[240px] lg:w-[260px] rounded-[44px] p-[9px]"
               style={{
                 aspectRatio: "9/19.5",
-                background: "linear-gradient(145deg, #1a1a2e, #0f0f1a)",
-                boxShadow: "0 30px 80px -15px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
+                background: "linear-gradient(145deg, #2a2a3e, #1a1a2e)",
+                boxShadow: "0 30px 80px -15px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.08), 0 0 40px rgba(212,168,67,0.08)",
               }}
               animate={{ y: tapped ? -6 : 0 }}
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -374,7 +374,7 @@ const HeroSection = () => {
               {!tapped && (
                 <motion.div
                   onClick={handleManualTap}
-                  className="mt-4 lg:absolute lg:mt-0 lg:-bottom-2 lg:-right-24 rounded-xl cursor-pointer select-none overflow-hidden"
+                  className="-mt-8 lg:absolute lg:mt-0 lg:-bottom-6 lg:-right-24 rounded-xl cursor-pointer select-none overflow-hidden"
                   style={{
                     width: 240,
                     height: 150,
