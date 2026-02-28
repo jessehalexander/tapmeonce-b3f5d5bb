@@ -374,7 +374,7 @@ const HeroSection = () => {
               {!tapped && (
                 <motion.div
                   onClick={handleManualTap}
-                  className="-mt-8 lg:absolute lg:mt-0 lg:-bottom-6 lg:-right-24 rounded-xl cursor-pointer select-none overflow-hidden"
+                  className="-mt-16 md:-mt-20 lg:absolute lg:mt-0 lg:-bottom-2 lg:-right-24 rounded-xl cursor-pointer select-none overflow-hidden"
                   style={{
                     width: 240,
                     height: 150,
@@ -427,7 +427,7 @@ const HeroSection = () => {
             <AnimatePresence>
               {phase === "idle" && (
                 <motion.div
-                  className="mt-3 lg:absolute lg:mt-0 lg:bottom-2 lg:right-4"
+                  className="mt-6 md:mt-3 lg:absolute lg:mt-0 lg:-bottom-14 lg:right-4"
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
