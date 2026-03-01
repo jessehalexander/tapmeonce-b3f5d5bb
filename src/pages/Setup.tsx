@@ -175,7 +175,7 @@ export default function Setup() {
     return `I'm a ${role}${org}${loc}. I bring energy, clarity, and a results-first mindset to everything I do. Whether it's strategy, execution, or people — I show up with intention. Let's connect.`;
   };
 
-  const generateBio = async () => {
+  const generateBio = async (tone: 'formal' | 'friendly' | 'bold' = 'formal') => {
     if (!state.designation && !state.company) {
       toast.error('Add your designation first so AI can craft the perfect bio');
       return;
@@ -192,7 +192,8 @@ export default function Setup() {
           job_title: state.designation,
           company: state.company || '',
           bio_raw: state.bio || '',
-          vibe: state.isStudent ? 'modern_creative' : 'executive_bold',
+          tone: tone,                                          // "formal" | "friendly" | "bold"
+          is_student: state.isStudent,
           plan: state.plan,
           location: state.location || '',
         }),
@@ -437,7 +438,7 @@ export default function Setup() {
       </header>
 
       {/* ─── Content ─── */}
-      <main className="flex-1 container max-w-2xl py-8 px-4">
+      <main className="flex-1 container max-w-2xl py-8 px-4 pb-28">
         <AnimatePresence mode="wait">
           <motion.div
             key={state.step}
@@ -454,8 +455,25 @@ export default function Setup() {
           </motion.div>
         </AnimatePresence>
 
-        {/* ─── Navigation ─── */}
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+        {/* No-links warning */}
+        {state.step === 4 && hasNoLinks && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex gap-3 items-start text-sm"
+          >
+            <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+            <span className="text-amber-300">
+              <strong>Heads up:</strong> According to LinkedIn research, profiles with at least one social link
+              get <strong>10x more engagement</strong> than those without. Add a link to boost your impact!
+            </span>
+          </motion.div>
+        )}
+      </main>
+
+      {/* ─── Sticky bottom navigation — always visible on mobile ─── */}
+      <div className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border">
+        <div className="container max-w-2xl flex items-center justify-between py-4 px-4">
           {state.step > 1 ? (
             <Button variant="ghost" onClick={() => goToStep(state.step - 1)} className="gap-2">
               <ChevronLeft className="h-4 w-4" /> Back
@@ -503,22 +521,7 @@ export default function Setup() {
             </Button>
           )}
         </div>
-
-        {/* No-links warning */}
-        {state.step === 4 && hasNoLinks && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex gap-3 items-start text-sm"
-          >
-            <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-            <span className="text-amber-300">
-              <strong>Heads up:</strong> According to LinkedIn research, profiles with at least one social link
-              get <strong>10x more engagement</strong> than those without. Add a link to boost your impact!
-            </span>
-          </motion.div>
-        )}
-      </main>
+      </div>
 
       {/* ─── Exit confirmation ─── */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
@@ -780,6 +783,14 @@ function StepAccount({ state, update, usernameStatus, showPassword, setShowPassw
 // ─────────────────────────────────────────────
 function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarChange, generatingBio, generateBio }: any) {
   const isPro = state.plan !== 'free';
+  const [tone, setTone] = useState<'formal' | 'friendly' | 'bold'>('formal');
+
+  const TONES: { id: 'formal' | 'friendly' | 'bold'; label: string; desc: string }[] = [
+    { id: 'formal',   label: 'Formal',   desc: 'Professional & polished' },
+    { id: 'friendly', label: 'Friendly', desc: 'Warm & approachable' },
+    { id: 'bold',     label: 'Bold',     desc: 'Punchy & memorable' },
+  ];
+
   return (
     <div>
       <h1 className="font-display text-3xl font-bold mb-1">Your profile</h1>
@@ -830,14 +841,14 @@ function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarC
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <Label>Bio <span className="text-muted-foreground">(optional)</span></Label>
             {isPro && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={generateBio}
+                onClick={() => generateBio(tone)}
                 disabled={generatingBio}
                 className="h-7 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
               >
@@ -846,6 +857,32 @@ function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarC
               </Button>
             )}
           </div>
+
+          {/* ── Tone picker — Pro only ── */}
+          {isPro && (
+            <div className="mb-2">
+              <p className="text-[11px] text-muted-foreground mb-1.5">Choose a tone for your bio</p>
+              <div className="grid grid-cols-3 gap-2">
+                {TONES.map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTone(t.id)}
+                    className={cn(
+                      'flex flex-col items-center py-2 px-1 rounded-lg border text-center transition-all',
+                      tone === t.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                    )}
+                  >
+                    <span className="text-xs font-semibold">{t.label}</span>
+                    <span className="text-[10px] mt-0.5 opacity-70">{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Textarea
             value={state.bio}
             onChange={e => update('bio', e.target.value)}
