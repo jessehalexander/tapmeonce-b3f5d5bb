@@ -157,14 +157,13 @@ export default function Setup() {
 
   // ─── AI Bio generation ────────────────────
   const buildFallbackBio = () => {
-    const name = state.fullName || 'I';
     const role = state.designation || 'professional';
     const org = state.company ? ` at ${state.company}` : '';
-    const loc = state.location ? ` based in ${state.location}` : '';
+    const loc = state.location ? `, ${state.location}` : '';
     if (state.isStudent) {
-      return `${name} is a ${role}${org}${loc}, passionate about learning and building real-world skills. Open to collaborations, internships, and new opportunities.`;
+      return `I'm a ${role}${org}${loc} — curious, driven, and always building. I love turning ideas into real things and connecting with people who think differently. Open to internships, collaborations, and anything that pushes me to grow.`;
     }
-    return `${name} is a ${role}${org}${loc}. Focused on delivering results and building meaningful connections. Tap to connect.`;
+    return `I'm a ${role}${org}${loc}. I bring energy, clarity, and a results-first mindset to everything I do. Whether it's strategy, execution, or people — I show up with intention. Let's connect.`;
   };
 
   const generateBio = async () => {
