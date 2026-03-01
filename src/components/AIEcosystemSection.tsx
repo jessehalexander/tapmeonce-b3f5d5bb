@@ -15,7 +15,7 @@ const goldLight  = "#e8c66a";
 // ── 1. Bio Generator Card ──────────────────────
 const BioCard = () => (
   <div
-    className="rounded-2xl p-5 flex flex-col gap-4"
+    className="rounded-2xl p-5 flex flex-col gap-4 h-full"
     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
   >
     {/* Input row */}
@@ -67,32 +67,40 @@ const BioCard = () => (
 // ── 2. Lead Capture + WhatsApp Card ───────────
 const LeadCard = () => (
   <div
-    className="rounded-2xl p-5 flex flex-col gap-4"
+    className="rounded-2xl p-5 flex flex-col gap-4 h-full"
     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
   >
-    <p className="text-[10px] text-white/40 uppercase tracking-widest">Lead Captured</p>
+    <p className="text-[10px] text-white/40 uppercase tracking-widest">Leads Captured</p>
 
-    {/* Lead row */}
-    <div
-      className="flex items-center gap-3 rounded-xl px-3 py-3"
-      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
-    >
-      <div
-        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white"
-        style={{ background: `${goldAccent}30` }}
-      >
-        P
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-white">Priya Sharma</p>
-        <p className="text-[10px] text-white/50">+91 98765 43210 · Mumbai</p>
-      </div>
-      <CheckCircle2 size={14} color={goldLight} />
+    {/* Lead rows */}
+    <div className="flex flex-col gap-2">
+      {[
+        { initial: "P", name: "Priya Sharma", detail: "+91 98765 43210 · Mumbai" },
+        { initial: "A", name: "Arjun Mehta",  detail: "+91 91234 56789 · Bengaluru" },
+      ].map((lead) => (
+        <div
+          key={lead.name}
+          className="flex items-center gap-3 rounded-xl px-3 py-3"
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white"
+            style={{ background: `${goldAccent}30` }}
+          >
+            {lead.initial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white">{lead.name}</p>
+            <p className="text-[10px] text-white/50">{lead.detail}</p>
+          </div>
+          <CheckCircle2 size={14} color={goldLight} />
+        </div>
+      ))}
     </div>
 
-    {/* WhatsApp ping */}
+    {/* WhatsApp ping — mt-auto pushes it to the bottom */}
     <div
-      className="rounded-xl p-3"
+      className="rounded-xl p-3 mt-auto"
       style={{ background: "#25D36612", border: "1px solid #25D36630" }}
     >
       <div className="flex items-center gap-2 mb-1.5">
@@ -120,7 +128,7 @@ const AnalyticsCard = () => {
 
   return (
     <div
-      className="rounded-2xl p-5 flex flex-col gap-4"
+      className="rounded-2xl p-5 flex flex-col gap-4 h-full"
       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
     >
       <div className="flex items-center justify-between">
@@ -251,8 +259,8 @@ const AIEcosystemSection = () => (
               </div>
             </div>
 
-            {/* Card — flex-1 so all three columns reach the same bottom edge */}
-            <div className="flex-1 flex flex-col [&>div]:flex-1">
+            {/* Card — flex-1 ensures card fills remaining column height */}
+            <div className="flex-1 flex flex-col">
               {p.card}
             </div>
           </motion.div>
