@@ -113,7 +113,7 @@ export default function Setup() {
     usernameTimer.current = setTimeout(async () => {
       const available = await checkUsernameAvailable(state.username);
       setUsernameStatus(available ? 'available' : 'taken');
-    }, 600);
+    }, 300);
     return () => clearTimeout(usernameTimer.current);
   }, [state.username]);
 
@@ -161,7 +161,10 @@ export default function Setup() {
         );
       case 3: return !!(state.designation.trim());
       case 4: return true; // Links are optional
-      case 5: return true;
+      case 5: {
+        const a = state.shippingAddress as any;
+        return !!(a.name?.trim() && a.line1?.trim() && a.city?.trim() && a.state?.trim() && a.pincode?.trim());
+      }
       default: return false;
     }
   };
@@ -263,7 +266,7 @@ export default function Setup() {
 
   const createAccount = async (paymentId?: string) => {
     if (!isSupabaseConfigured) {
-      toast.error('⚙️ Backend not connected yet. Add your Supabase URL and key in Lovable → Project Settings → Environment Variables, then redeploy.');
+      toast.error('Almost there! Connect your backend in Lovable → Project Settings → Environment Variables to enable account creation.', { duration: 6000 });
       return;
     }
     setIsSubmitting(true);
@@ -378,7 +381,7 @@ export default function Setup() {
 
   const initiateRazorpayPayment = async () => {
     if (!isSupabaseConfigured) {
-      toast.error('⚙️ Backend not connected yet. Add your Supabase URL and key in Lovable → Project Settings → Environment Variables, then redeploy.');
+      toast.error('Almost there! Connect your backend in Lovable → Project Settings → Environment Variables to enable payments.', { duration: 6000 });
       return;
     }
     if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
@@ -511,8 +514,16 @@ export default function Setup() {
             </Button>
           ) : (
             <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !state.shippingAddress.name}
+              onClick={() => {
+                const a = state.shippingAddress as any;
+                if (!a.name?.trim()) { toast.error('Please enter your full name for delivery'); return; }
+                if (!a.line1?.trim()) { toast.error('Please enter your address'); return; }
+                if (!a.city?.trim()) { toast.error('Please enter your city'); return; }
+                if (!a.state?.trim()) { toast.error('Please enter your state'); return; }
+                if (!a.pincode?.trim()) { toast.error('Please enter your PIN code'); return; }
+                handleSubmit();
+              }}
+              disabled={isSubmitting}
               className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2 min-w-32"
             >
               {isSubmitting ? (
@@ -651,7 +662,58 @@ function StepPlan({ state, update, billingCycle, setBillingCycle }: any) {
 // Step 2: Account
 // ─────────────────────────────────────────────
 function StepAccount({ state, update, usernameStatus, showPassword, setShowPassword, triedNext }: any) {
-  const COUNTRY_CODES = ['+91', '+1', '+44', '+61', '+65', '+971'];
+  const COUNTRY_CODES = [
+    { code: '+91',  label: '🇮🇳 +91  India' },
+    { code: '+1',   label: '🇺🇸 +1   USA / Canada' },
+    { code: '+44',  label: '🇬🇧 +44  UK' },
+    { code: '+61',  label: '🇦🇺 +61  Australia' },
+    { code: '+64',  label: '🇳🇿 +64  New Zealand' },
+    { code: '+65',  label: '🇸🇬 +65  Singapore' },
+    { code: '+60',  label: '🇲🇾 +60  Malaysia' },
+    { code: '+62',  label: '🇮🇩 +62  Indonesia' },
+    { code: '+63',  label: '🇵🇭 +63  Philippines' },
+    { code: '+66',  label: '🇹🇭 +66  Thailand' },
+    { code: '+84',  label: '🇻🇳 +84  Vietnam' },
+    { code: '+92',  label: '🇵🇰 +92  Pakistan' },
+    { code: '+880', label: '🇧🇩 +880 Bangladesh' },
+    { code: '+94',  label: '🇱🇰 +94  Sri Lanka' },
+    { code: '+977', label: '🇳🇵 +977 Nepal' },
+    { code: '+971', label: '🇦🇪 +971 UAE' },
+    { code: '+966', label: '🇸🇦 +966 Saudi Arabia' },
+    { code: '+974', label: '🇶🇦 +974 Qatar' },
+    { code: '+973', label: '🇧🇭 +973 Bahrain' },
+    { code: '+968', label: '🇴🇲 +968 Oman' },
+    { code: '+965', label: '🇰🇼 +965 Kuwait' },
+    { code: '+49',  label: '🇩🇪 +49  Germany' },
+    { code: '+33',  label: '🇫🇷 +33  France' },
+    { code: '+39',  label: '🇮🇹 +39  Italy' },
+    { code: '+34',  label: '🇪🇸 +34  Spain' },
+    { code: '+31',  label: '🇳🇱 +31  Netherlands' },
+    { code: '+41',  label: '🇨🇭 +41  Switzerland' },
+    { code: '+46',  label: '🇸🇪 +46  Sweden' },
+    { code: '+47',  label: '🇳🇴 +47  Norway' },
+    { code: '+45',  label: '🇩🇰 +45  Denmark' },
+    { code: '+358', label: '🇫🇮 +358 Finland' },
+    { code: '+32',  label: '🇧🇪 +32  Belgium' },
+    { code: '+43',  label: '🇦🇹 +43  Austria' },
+    { code: '+48',  label: '🇵🇱 +48  Poland' },
+    { code: '+7',   label: '🇷🇺 +7   Russia' },
+    { code: '+86',  label: '🇨🇳 +86  China' },
+    { code: '+81',  label: '🇯🇵 +81  Japan' },
+    { code: '+82',  label: '🇰🇷 +82  South Korea' },
+    { code: '+852', label: '🇭🇰 +852 Hong Kong' },
+    { code: '+886', label: '🇹🇼 +886 Taiwan' },
+    { code: '+55',  label: '🇧🇷 +55  Brazil' },
+    { code: '+52',  label: '🇲🇽 +52  Mexico' },
+    { code: '+54',  label: '🇦🇷 +54  Argentina' },
+    { code: '+56',  label: '🇨🇱 +56  Chile' },
+    { code: '+57',  label: '🇨🇴 +57  Colombia' },
+    { code: '+20',  label: '🇪🇬 +20  Egypt' },
+    { code: '+234', label: '🇳🇬 +234 Nigeria' },
+    { code: '+27',  label: '🇿🇦 +27  South Africa' },
+    { code: '+254', label: '🇰🇪 +254 Kenya' },
+    { code: '+233', label: '🇬🇭 +233 Ghana' },
+  ];
 
   return (
     <div>
@@ -740,10 +802,10 @@ function StepAccount({ state, update, usernameStatus, showPassword, setShowPassw
             <select
               value={state.countryCode}
               onChange={e => update('countryCode', e.target.value)}
-              className="w-24 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
+              className="w-36 rounded-md border border-input bg-background px-2 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
             >
-              {COUNTRY_CODES.map(code => (
-                <option key={code} value={code}>{code}</option>
+              {COUNTRY_CODES.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
               ))}
             </select>
             <Input
@@ -757,16 +819,30 @@ function StepAccount({ state, update, usernameStatus, showPassword, setShowPassw
           </div>
         </div>
 
-        {/* Student / Working toggle */}
-        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-secondary/40">
-          <div className="flex items-center gap-2">
-            {state.isStudent ? <GraduationCap className="h-4 w-4 text-primary" /> : <Building2 className="h-4 w-4 text-primary" />}
-            <span className="text-sm font-medium">{state.isStudent ? 'Student' : 'Working Professional'}</span>
+        {/* Student / Professional pill tabs */}
+        <div>
+          <Label className="mb-2 block">I am a</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: false, icon: Building2, label: 'Professional' },
+              { value: true,  icon: GraduationCap, label: 'Student' },
+            ].map(({ value, icon: Icon, label }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => update('isStudent', value)}
+                className={cn(
+                  'flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-sm font-medium transition-all',
+                  state.isStudent === value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
           </div>
-          <Switch
-            checked={state.isStudent}
-            onCheckedChange={v => update('isStudent', v)}
-          />
         </div>
 
         <div>
