@@ -192,9 +192,11 @@ export default function Setup() {
       clearTimeout(timeout);
       if (!res.ok) throw new Error('non-ok');
       const data = await res.json();
-      const bio = data.bio || data.result || data.output || data.text || '';
+      const bio = data.ai_bio || data.bio || data.result || data.output || data.text || '';
       if (!bio) throw new Error('empty-response');
       update('bio', bio);
+      // Also use tagline as a hint if available
+      if (data.ai_tagline && !state.designation) update('designation', data.ai_tagline);
       toast.success('AI bio generated! Feel free to edit it.');
     } catch (err: any) {
       // CORS / network / timeout → use a smart template as fallback
