@@ -156,6 +156,17 @@ export default function Setup() {
   };
 
   // ─── AI Bio generation ────────────────────
+  const buildFallbackBio = () => {
+    const name = state.fullName || 'I';
+    const role = state.designation || 'professional';
+    const org = state.company ? ` at ${state.company}` : '';
+    const loc = state.location ? ` based in ${state.location}` : '';
+    if (state.isStudent) {
+      return `${name} is a ${role}${org}${loc}, passionate about learning and building real-world skills. Open to collaborations, internships, and new opportunities.`;
+    }
+    return `${name} is a ${role}${org}${loc}. Focused on delivering results and building meaningful connections. Tap to connect.`;
+  };
+
   const generateBio = async () => {
     if (!state.designation && !state.company) {
       toast.error('Add your designation first so AI can craft the perfect bio');
@@ -163,6 +174,8 @@ export default function Setup() {
     }
     setGeneratingBio(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
       const res = await fetch(N8N_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,13 +186,25 @@ export default function Setup() {
           isStudent: state.isStudent,
           location: state.location,
         }),
+        signal: controller.signal,
       });
-      if (!res.ok) throw new Error('AI service unavailable');
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error('non-ok');
       const data = await res.json();
-      update('bio', data.bio || data.result || '');
+      const bio = data.bio || data.result || data.output || data.text || '';
+      if (!bio) throw new Error('empty-response');
+      update('bio', bio);
       toast.success('AI bio generated! Feel free to edit it.');
-    } catch {
-      toast.error('Bio generation failed. You can write it manually.');
+    } catch (err: any) {
+      // CORS / network / timeout → use a smart template as fallback
+      const fallback = buildFallbackBio();
+      update('bio', fallback);
+      const isCors = err?.name === 'TypeError' || err?.message === 'Failed to fetch';
+      if (isCors) {
+        toast.info('AI service has a CORS issue — generated a starter bio instead. You can edit it freely, or fix CORS in your n8n webhook to enable full AI.');
+      } else {
+        toast.info('AI service unavailable — generated a starter bio instead. Feel free to edit it.');
+      }
     } finally {
       setGeneratingBio(false);
     }
