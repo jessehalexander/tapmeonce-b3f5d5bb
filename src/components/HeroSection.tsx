@@ -77,7 +77,7 @@ const HeroSection = () => {
           </h1>
 
           <p className="max-w-md text-lg text-muted-foreground leading-relaxed">
-            Before your card even ships, AI writes your professional bio and builds your digital profile. Then hold the card near any smartphone — your profile opens instantly, no app needed. Every tap after that automatically captures leads and tracks where your network is growing.
+            Most business cards get forgotten by morning. TapMeOnce doesn't. One tap on any phone opens a stunning AI-built profile — no app, no friction, no lost connections. While you focus on the conversation, it quietly captures every lead and tracks exactly how far your network is reaching.
           </p>
 
           <div className="flex flex-wrap gap-4">
