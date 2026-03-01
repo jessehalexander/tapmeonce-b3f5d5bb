@@ -90,6 +90,7 @@ export default function Setup() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [triedNext, setTriedNext] = useState(false);
   const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -399,7 +400,7 @@ export default function Setup() {
             transition={{ duration: 0.25 }}
           >
             {state.step === 1 && <StepPlan state={state} update={update} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
-            {state.step === 2 && <StepAccount state={state} update={update} usernameStatus={usernameStatus} showPassword={showPassword} setShowPassword={setShowPassword} />}
+            {state.step === 2 && <StepAccount state={state} update={update} usernameStatus={usernameStatus} showPassword={showPassword} setShowPassword={setShowPassword} triedNext={triedNext} />}
             {state.step === 3 && <StepProfile state={state} update={update} avatarPreview={avatarPreview} fileInputRef={fileInputRef} handleAvatarChange={handleAvatarChange} generatingBio={generatingBio} generateBio={generateBio} />}
             {state.step === 4 && <StepLinks state={state} update={update} addLink={addLink} updateLink={updateLink} removeLink={removeLink} />}
             {state.step === 5 && <StepCheckout state={state} update={update} orderTotals={orderTotals} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
@@ -420,8 +421,23 @@ export default function Setup() {
 
           {state.step < STEPS.length ? (
             <Button
-              onClick={() => goToStep(state.step + 1)}
-              disabled={!canProceed()}
+              onClick={() => {
+                if (!canProceed()) {
+                  setTriedNext(true);
+                  if (state.step === 2) {
+                    if (!state.fullName.trim()) toast.error('Please enter your full name');
+                    else if (state.username.length < 3) toast.error('Username must be at least 3 characters');
+                    else if (usernameStatus === 'taken') toast.error('That username is taken — try a different one');
+                    else if (usernameStatus === 'checking') toast.error('Checking username availability, please wait…');
+                    else if (!state.email.includes('@')) toast.error('Please enter a valid email address');
+                    else if (state.password.length < 8) toast.error('Password must be at least 8 characters');
+                    else if (state.phone.replace(/\D/g, '').length < 10) toast.error('Please enter a valid 10-digit phone number');
+                  }
+                  return;
+                }
+                setTriedNext(false);
+                goToStep(state.step + 1);
+              }}
               className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2"
             >
               Continue <ChevronRight className="h-4 w-4" />
@@ -584,7 +600,7 @@ function StepPlan({ state, update, billingCycle, setBillingCycle }: any) {
 // ─────────────────────────────────────────────
 // Step 2: Account
 // ─────────────────────────────────────────────
-function StepAccount({ state, update, usernameStatus, showPassword, setShowPassword }: any) {
+function StepAccount({ state, update, usernameStatus, showPassword, setShowPassword, triedNext }: any) {
   const COUNTRY_CODES = ['+91', '+1', '+44', '+61', '+65', '+971'];
 
   return (
@@ -651,8 +667,17 @@ function StepAccount({ state, update, usernameStatus, showPassword, setShowPassw
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {state.password && state.password.length < 8 && (
-            <p className="text-xs text-muted-foreground mt-1">At least 8 characters</p>
+          {state.password.length > 0 && state.password.length < 8 && (
+            <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              At least 8 characters ({state.password.length}/8)
+            </p>
+          )}
+          {(triedNext && state.password.length === 0) && (
+            <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Password is required
+            </p>
           )}
         </div>
 
