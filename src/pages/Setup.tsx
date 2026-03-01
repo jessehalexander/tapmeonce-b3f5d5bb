@@ -174,7 +174,7 @@ export default function Setup() {
     setGeneratingBio(true);
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout — OpenAI can be slow
       const res = await fetch(N8N_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
