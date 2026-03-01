@@ -219,7 +219,7 @@ const AIEcosystemSection = () => (
         </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-6 items-stretch">
         {panels.map((p, i) => (
           <motion.div
             key={p.title}
@@ -227,7 +227,7 @@ const AIEcosystemSection = () => (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: i * 0.15 }}
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-5 h-full"
           >
             {/* Header */}
             <div className="flex items-start gap-3">
@@ -251,8 +251,10 @@ const AIEcosystemSection = () => (
               </div>
             </div>
 
-            {/* Card */}
-            {p.card}
+            {/* Card — flex-1 so all three columns reach the same bottom edge */}
+            <div className="flex-1 flex flex-col [&>div]:flex-1">
+              {p.card}
+            </div>
           </motion.div>
         ))}
       </div>
