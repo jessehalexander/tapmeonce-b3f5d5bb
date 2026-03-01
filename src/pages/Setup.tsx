@@ -428,8 +428,8 @@ export default function Setup() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* ─── Top bar ─── */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
-        <div className="container h-14 flex items-center justify-between">
-          <a href="/"><img src={logo} alt="TapMeOnce" className="h-9" /></a>
+        <div className="container h-16 flex items-center justify-between">
+          <a href="/"><img src={logo} alt="TapMeOnce" className="h-12" /></a>
           <StepIndicator current={state.step} total={STEPS.length} labels={STEPS} />
           <div className="w-24 text-right text-xs text-muted-foreground">
             Step {state.step} of {STEPS.length}

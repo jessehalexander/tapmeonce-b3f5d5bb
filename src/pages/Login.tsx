@@ -61,8 +61,8 @@ export default function Login() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border">
-        <div className="container h-14 flex items-center justify-between">
-          <Link to="/"><img src={logo} alt="TapMeOnce" className="h-9" /></Link>
+        <div className="container h-16 flex items-center justify-between">
+          <Link to="/"><img src={logo} alt="TapMeOnce" className="h-12" /></Link>
           <span className="text-xs text-muted-foreground">
             No account? <Link to="/setup" className="text-primary hover:underline">Get your card</Link>
           </span>

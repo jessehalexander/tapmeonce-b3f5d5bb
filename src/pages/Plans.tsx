@@ -75,7 +75,7 @@ export default function Plans() {
           <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
-          <img src={logo} alt="TapMeOnce" className="h-9 ml-auto" />
+          <img src={logo} alt="TapMeOnce" className="h-12 ml-auto" />
         </div>
       </header>
 
