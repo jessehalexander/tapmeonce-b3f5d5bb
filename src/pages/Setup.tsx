@@ -454,7 +454,7 @@ export default function Setup() {
           >
             {state.step === 1 && <StepPlan state={state} update={update} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
             {state.step === 2 && <StepAccount state={state} update={update} usernameStatus={usernameStatus} showPassword={showPassword} setShowPassword={setShowPassword} triedNext={triedNext} />}
-            {state.step === 3 && <StepProfile state={state} update={update} avatarPreview={avatarPreview} fileInputRef={fileInputRef} handleAvatarChange={handleAvatarChange} generatingBio={generatingBio} generateBio={generateBio} />}
+            {state.step === 3 && <StepProfile state={state} update={update} avatarPreview={avatarPreview} fileInputRef={fileInputRef} handleAvatarChange={handleAvatarChange} generatingBio={generatingBio} generateBio={generateBio} triedNext={triedNext} />}
             {state.step === 4 && <StepLinks state={state} update={update} addLink={addLink} updateLink={updateLink} removeLink={removeLink} />}
             {state.step === 5 && <StepCheckout state={state} update={update} orderTotals={orderTotals} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
           </motion.div>
@@ -502,6 +502,8 @@ export default function Setup() {
                     else if (!state.email.includes('@')) toast.error('Please enter a valid email address');
                     else if (state.password.length < 8) toast.error('Password must be at least 8 characters');
                     else if (state.phone.replace(/\D/g, '').length < 10) toast.error('Please enter a valid 10-digit phone number');
+                  } else if (state.step === 3) {
+                    if (!state.designation.trim()) toast.error('Please enter your title or designation — this is shown on your profile');
                   }
                   return;
                 }
@@ -862,7 +864,7 @@ function StepAccount({ state, update, usernameStatus, showPassword, setShowPassw
 // ─────────────────────────────────────────────
 // Step 3: Profile
 // ─────────────────────────────────────────────
-function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarChange, generatingBio, generateBio }: any) {
+function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarChange, generatingBio, generateBio, triedNext }: any) {
   const isPro = state.plan !== 'free';
   const [tone, setTone] = useState<'formal' | 'friendly' | 'bold'>('formal');
 
@@ -906,9 +908,14 @@ function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarC
             value={state.designation}
             onChange={e => update('designation', e.target.value)}
             placeholder="Product Designer, Sales Manager, CA…"
-            className="mt-1.5"
+            className={cn('mt-1.5', triedNext && !state.designation.trim() && 'border-destructive focus-visible:ring-destructive')}
             autoFocus
           />
+          {triedNext && !state.designation.trim() && (
+            <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> This field is required
+            </p>
+          )}
         </div>
 
         <div>
