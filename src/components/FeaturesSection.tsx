@@ -1,38 +1,40 @@
 import { motion } from "framer-motion";
-import { Smartphone, Zap, Globe, Shield, Sparkles, Users } from "lucide-react";
+import { Smartphone, Zap, BarChart3, Shield, Sparkles, Users, Layers, BellRing } from "lucide-react";
 
 const features = [
   {
     icon: Zap,
     title: "Instant Sharing",
-    description: "One tap transfers your full digital profile — no app needed on the receiver's end.",
-  },
-  {
-    icon: Globe,
-    title: "Custom Landing Page",
-    description: "Each card links to a fully customizable profile with your links, socials, and bio.",
+    description: "One tap opens your full digital profile on any iPhone or Android — no app needed on the receiver's end. Ever.",
   },
   {
     icon: Sparkles,
-    title: "AI-Powered Bio",
-    description: "Our AI writes a sharp, memorable bio in seconds — tailored to your role, tone, and personality.",
+    title: "AI Bio Generator",
+    description: "Tell us your role, skills, and experience. Pick a tone — formal, friendly, or bold. AI writes a crisp 2–3 line bio that sounds exactly like you, only sharper.",
     badge: "AI",
   },
   {
     icon: Users,
     title: "Lead Capture",
-    description: "Visitors can share their contact info directly from your profile. Build your network effortlessly.",
+    description: "Visitors choose to share their contact info from your profile. You get an instant WhatsApp ping with their name, phone, and city. No awkward follow-up. No forgotten cards.",
     badge: "Pro",
   },
   {
-    icon: Smartphone,
-    title: "Works Everywhere",
-    description: "Compatible with all modern iPhones and Android devices. No app required.",
+    icon: BarChart3,
+    title: "Smart Analytics",
+    description: "See every tap, city, device type, and link click. Know exactly when and where your card is making an impact — with weekly WhatsApp reports sent straight to you.",
+    badge: "Pro",
+  },
+  {
+    icon: Layers,
+    title: "Dual Profile Modes",
+    description: "Same card, two identities. Switch between Business Mode and Personal Mode from your dashboard. You control which face the world sees — without reprinting anything.",
+    badge: "Pro",
   },
   {
     icon: Shield,
     title: "Always Up to Date",
-    description: "Update your info anytime. Your card never goes out of date — unlike paper.",
+    description: "Changed jobs? New number? Your card updates everywhere, instantly. No reprint. No redistribution. The card people already have always shows the latest you.",
   },
 ];
 

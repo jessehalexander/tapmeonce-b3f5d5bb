@@ -4,17 +4,17 @@ const steps = [
   {
     number: "01",
     title: "Order Your Card",
-    description: "Choose your design and personalize your NFC smart card.",
+    description: "Choose PVC or Metal finish. We print, package, and deliver your NFC card to your door anywhere in India within 5–7 days.",
   },
   {
     number: "02",
-    title: "Set Up Your Profile",
-    description: "Add your links, contact info, and social profiles to your custom page.",
+    title: "AI Crafts Your Profile",
+    description: "Answer a few questions about your role, skills, and personality. Pick a tone — formal, friendly, or bold. Our AI writes your bio and structures your profile in seconds. No designer needed.",
   },
   {
     number: "03",
-    title: "Tap & Connect",
-    description: "Hold your card to any smartphone. Your profile opens instantly — no app needed.",
+    title: "Tap, Capture & Grow",
+    description: "Hold your card to any smartphone. Your profile opens instantly. Visitors can save your contact or share their details back — and you get a WhatsApp alert the moment they do.",
   },
 ];
 

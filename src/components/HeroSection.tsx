@@ -64,19 +64,19 @@ const HeroSection = () => {
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-gold-subtle px-4 py-1.5 text-sm text-primary">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            The Future of Networking
+            AI-Powered NFC · Now Launching in India
           </div>
 
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight">
             One Tap.
             <br />
-            <span className="text-gradient-gold">Infinite</span>
+            <span className="text-gradient-gold">AI-Powered</span>
             <br />
-            Connections.
+            Identity.
           </h1>
 
           <p className="max-w-md text-lg text-muted-foreground leading-relaxed">
-            Ditch the paper cards. Share your contact info, socials, and portfolio with a single tap of your NFC-powered smart card.
+            More than a digital card. TapMeOnce uses AI to write your professional bio, capture leads from every visitor, and give you city-level analytics — all from a single tap of your NFC card.
           </p>
 
           <div className="flex flex-wrap gap-4">
@@ -94,21 +94,21 @@ const HeroSection = () => {
             </a>
           </div>
 
-          <div className="flex items-center gap-6 pt-4">
-            <div className="text-center">
-              <div className="font-display text-2xl font-bold text-foreground">10K+</div>
-              <div className="text-xs text-muted-foreground">Cards Shipped</div>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="text-center">
-              <div className="font-display text-2xl font-bold text-foreground">50K+</div>
-              <div className="text-xs text-muted-foreground">Taps Made</div>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="text-center">
-              <div className="font-display text-2xl font-bold text-foreground">4.9★</div>
-              <div className="text-xs text-muted-foreground">Rating</div>
-            </div>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            {[
+              { emoji: "✦", label: "AI Bio Generator" },
+              { emoji: "📍", label: "City-Level Analytics" },
+              { emoji: "💬", label: "WhatsApp Lead Alerts" },
+              { emoji: "🔄", label: "Dual Profile Modes" },
+            ].map((chip) => (
+              <span
+                key={chip.label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground"
+              >
+                <span>{chip.emoji}</span>
+                {chip.label}
+              </span>
+            ))}
           </div>
         </motion.div>
 
