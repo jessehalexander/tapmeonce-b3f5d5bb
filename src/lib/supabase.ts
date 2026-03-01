@@ -1,26 +1,14 @@
 // ─────────────────────────────────────────────
-// TapMeOnce — Supabase Client
-// Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env
+// TapMeOnce — Supabase Helpers
+// Re-exports the auto-generated client + app-specific helpers
 // ─────────────────────────────────────────────
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
+// Re-export the single client instance
+export { supabase };
 
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
-
-if (!isSupabaseConfigured) {
-  console.warn(
-    '[TapMeOnce] Missing Supabase env vars. ' +
-    'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.'
-  );
-}
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+export const isSupabaseConfigured = true;
 
 // ─── Auth helpers ─────────────────────────────
 
@@ -78,7 +66,7 @@ export async function getLinks(userId: string) {
     .order('sort_order');
 }
 
-export async function upsertLink(link: object) {
+export async function upsertLink(link: any) {
   return supabase.from('links').upsert(link);
 }
 
@@ -137,7 +125,7 @@ export async function getTeamMembers(ownerId: string) {
     .order('created_at');
 }
 
-export async function inviteTeamMember(member: object) {
+export async function inviteTeamMember(member: any) {
   return supabase.from('team_members').insert(member);
 }
 
