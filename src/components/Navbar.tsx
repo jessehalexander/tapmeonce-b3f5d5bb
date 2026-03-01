@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Plans", href: "/plans" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Navbar() {
@@ -33,7 +34,7 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logo} alt="TapMeOnce" className="h-10" />
+          <img src={logo} alt="TapMeOnce" className="h-12" />
         </Link>
 
         {/* Desktop nav */}

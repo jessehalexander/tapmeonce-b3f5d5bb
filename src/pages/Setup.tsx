@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import logo from '@/assets/TapMeOnce-Logo.png';
 import { PLANS, CARD_PRICES, PLAN_LIST, getPerCardCost } from '@/lib/plans';
 import { checkUsernameAvailable, signUp, supabase, uploadAvatar, isSupabaseConfigured } from '@/lib/supabase';
 import { calculateOrderTotal, initiatePayment } from '@/lib/razorpay';
@@ -52,6 +53,7 @@ const INITIAL_STATE: SetupState = {
   location: '',
   links: [],
   whatsappSameAsPhone: true,
+  whatsappNumber: '',
   shippingAddress: {},
   leadGenConsent: false,
   referralCode: '',
@@ -243,14 +245,10 @@ export default function Setup() {
   };
 
   // ─── Final submit ─────────────────────────
+  // NOTE: Razorpay bypassed for now — account created directly.
+  // Payment integration will be wired up in a future release.
   const handleSubmit = async () => {
-    // Always use Razorpay if there is any amount to collect (e.g. card purchase on free plan)
-    const totals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
-    if (totals.total > 0) {
-      await initiateRazorpayPayment();
-    } else {
-      await createAccount();
-    }
+    await createAccount();
   };
 
   const createAccount = async (paymentId?: string) => {
@@ -313,10 +311,12 @@ export default function Setup() {
         }
       }
 
-      // 5. Add WhatsApp link if same as phone
-      if (state.whatsappSameAsPhone && state.phone) {
-        const waNumber = `${state.countryCode}${state.phone.replace(/\D/g, '')}`;
-        const waUrl = `https://wa.me/${waNumber.replace('+', '')}`;
+      // 5. Add WhatsApp link
+      const waRawNumber = state.whatsappSameAsPhone
+        ? `${state.countryCode}${state.phone.replace(/\D/g, '')}`
+        : (state.whatsappNumber || '').replace(/\D/g, '');
+      if (waRawNumber.length >= 10) {
+        const waUrl = `https://wa.me/${waRawNumber.replace('+', '')}`;
         await supabase.from('links').insert({
           user_id: userId,
           platform: 'whatsapp',
@@ -423,7 +423,7 @@ export default function Setup() {
       {/* ─── Top bar ─── */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
         <div className="container h-14 flex items-center justify-between">
-          <a href="/" className="text-sm font-semibold text-gradient-gold">TapMeOnce</a>
+          <a href="/"><img src={logo} alt="TapMeOnce" className="h-9" /></a>
           <StepIndicator current={state.step} total={STEPS.length} labels={STEPS} />
           <div className="w-24 text-right text-xs text-muted-foreground">
             Step {state.step} of {STEPS.length}
@@ -491,11 +491,9 @@ export default function Setup() {
               className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2 min-w-32"
             >
               {isSubmitting ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Processing…</>
-              ) : state.plan === 'free' ? (
-                <>Create Account <Check className="h-4 w-4" /></>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Creating Account…</>
               ) : (
-                <>Pay ₹{orderTotals.total} <CreditCard className="h-4 w-4" /></>
+                <>Create Account <Check className="h-4 w-4" /></>
               )}
             </Button>
           )}
@@ -888,7 +886,7 @@ function StepLinks({ state, update, addLink, updateLink, removeLink }: any) {
       <h1 className="font-display text-3xl font-bold mb-1">Your links</h1>
       <p className="text-muted-foreground mb-6">Add all your socials, websites, and contact methods.</p>
 
-      {/* WhatsApp from phone */}
+      {/* WhatsApp */}
       <div className="mb-4 p-4 rounded-lg bg-green-500/5 border border-green-500/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -899,17 +897,34 @@ function StepLinks({ state, update, addLink, updateLink, removeLink }: any) {
             </div>
             <div>
               <p className="text-sm font-medium">WhatsApp</p>
-              <p className="text-xs text-muted-foreground">{state.phone || 'No phone entered'}</p>
+              <p className="text-xs text-muted-foreground">
+                {state.whatsappSameAsPhone
+                  ? (state.phone ? `Same as phone (${state.countryCode}${state.phone})` : 'No phone entered')
+                  : 'Custom number'}
+              </p>
             </div>
           </div>
-          <Switch
-            checked={state.whatsappSameAsPhone}
-            onCheckedChange={v => update('whatsappSameAsPhone', v)}
-            disabled={!state.phone}
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Same as phone</span>
+            <Switch
+              checked={state.whatsappSameAsPhone}
+              onCheckedChange={v => update('whatsappSameAsPhone', v)}
+            />
+          </div>
         </div>
-        {state.whatsappSameAsPhone && (
-          <p className="text-xs text-green-400 mt-2">✓ Using your phone number ({state.countryCode}{state.phone})</p>
+        {state.whatsappSameAsPhone ? (
+          state.phone && <p className="text-xs text-green-400 mt-2">✓ Using {state.countryCode}{state.phone} for WhatsApp</p>
+        ) : (
+          <div className="mt-3">
+            <Input
+              type="tel"
+              value={state.whatsappNumber || ''}
+              onChange={e => update('whatsappNumber', e.target.value.replace(/[^\d+]/g, ''))}
+              placeholder="e.g. +919876543210 (include country code)"
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Include country code, e.g. +91 for India</p>
+          </div>
         )}
       </div>
 

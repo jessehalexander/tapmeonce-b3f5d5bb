@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { signIn, resetPassword } from '@/lib/supabase';
+import { signIn, resetPassword, isSupabaseConfigured } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import logo from '@/assets/TapMeOnce-Logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -25,6 +26,10 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error('Please fill in all fields'); return; }
+    if (!isSupabaseConfigured) {
+      toast.error('⚙️ Backend not connected yet — please try again shortly or contact support.');
+      return;
+    }
     setLoading(true);
     const { error } = await signIn(email, password);
     if (error) {
@@ -57,7 +62,7 @@ export default function Login() {
       {/* Header */}
       <header className="border-b border-border">
         <div className="container h-14 flex items-center justify-between">
-          <Link to="/" className="text-sm font-semibold text-gradient-gold">TapMeOnce</Link>
+          <Link to="/"><img src={logo} alt="TapMeOnce" className="h-9" /></Link>
           <span className="text-xs text-muted-foreground">
             No account? <Link to="/setup" className="text-primary hover:underline">Get your card</Link>
           </span>

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Check, X, ArrowLeft, Zap } from 'lucide-react';
+import logo from '@/assets/TapMeOnce-Logo.png';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -74,7 +75,7 @@ export default function Plans() {
           <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
-          <span className="text-sm font-semibold text-gradient-gold ml-auto">TapMeOnce</span>
+          <img src={logo} alt="TapMeOnce" className="h-9 ml-auto" />
         </div>
       </header>
 
@@ -129,34 +130,38 @@ export default function Plans() {
                   <p className="text-sm text-muted-foreground mt-1">{plan.tagline}</p>
                 </div>
 
-                <div className="mb-5">
-                  {plan.price === 0 ? (
-                    <span className="font-display text-4xl font-bold">Free</span>
-                  ) : (
-                    <>
-                      <span className="font-display text-4xl font-bold">₹{price}</span>
-                      <span className="text-sm text-muted-foreground">/mo</span>
-                      {billing === 'yearly' && (
-                        <p className="text-xs text-green-400 mt-0.5">Billed ₹{plan.yearlyPrice}/year</p>
-                      )}
-                    </>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">{plan.cardPriceNote}</p>
+                <div className="mb-5 space-y-3">
+                  {/* Subscription cost */}
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Subscription</p>
+                    {plan.price === 0 ? (
+                      <>
+                        <span className="font-display text-4xl font-bold">Free</span>
+                        <p className="text-xs text-muted-foreground mt-0.5">included with card</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-display text-4xl font-bold">₹{price}</span>
+                          <span className="text-sm text-muted-foreground">/mo</span>
+                        </div>
+                        {plan.id === 'business' && (
+                          <p className="text-xs text-amber-400 mt-0.5">for 5 users · +₹200/mo per extra user</p>
+                        )}
+                        {billing === 'yearly' && (
+                          <p className="text-xs text-green-400 mt-0.5">Billed ₹{plan.yearlyPrice}/year</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {/* Card cost */}
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">NFC Card (one-time)</p>
+                    <p className="text-xs text-muted-foreground">{plan.cardPriceNote}</p>
+                  </div>
                 </div>
 
-                <Link
-                  to={`/setup?plan=${plan.id}&billing=${billing}`}
-                  className={cn(
-                    'inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-all mb-5 mt-auto',
-                    plan.highlighted
-                      ? 'bg-gradient-gold text-primary-foreground hover:opacity-90'
-                      : 'border border-border text-foreground hover:bg-secondary'
-                  )}
-                >
-                  {plan.price === 0 ? 'Get Started Free' : `Start ${plan.name}`}
-                </Link>
-
-                <ul className="space-y-2.5">
+                <ul className="space-y-2.5 flex-1 mb-5">
                   {plan.features.slice(0, 8).map(f => (
                     <li key={f.label} className="flex items-start gap-2.5 text-sm">
                       {f.included
@@ -169,6 +174,18 @@ export default function Plans() {
                     </li>
                   ))}
                 </ul>
+
+                <Link
+                  to={`/setup?plan=${plan.id}&billing=${billing}`}
+                  className={cn(
+                    'inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-all mt-auto',
+                    plan.highlighted
+                      ? 'bg-gradient-gold text-primary-foreground hover:opacity-90'
+                      : 'border border-border text-foreground hover:bg-secondary'
+                  )}
+                >
+                  {plan.price === 0 ? 'Get Started Free' : `Start ${plan.name}`}
+                </Link>
               </motion.div>
             );
           })}
@@ -182,7 +199,7 @@ export default function Plans() {
 
           {/* Table header */}
           <div className="rounded-xl overflow-hidden border border-border">
-            <div className="grid grid-cols-4 gap-0 sticky top-14 z-10 bg-background border-b border-border">
+            <div className="grid grid-cols-4 gap-0 sticky top-14 z-20 bg-background border-b border-border shadow-sm">
               <div className="px-4 py-3 text-sm text-muted-foreground">Feature</div>
               {['Free', 'Professional', 'Business'].map(p => (
                 <div key={p} className={cn('px-4 py-3 text-center text-sm font-semibold', p === 'Professional' ? 'text-primary' : '')}>
@@ -220,12 +237,19 @@ export default function Plans() {
 
         {/* CTA */}
         <div className="text-center mt-12">
-          <p className="text-muted-foreground mb-4">Any questions? We're happy to help.</p>
-          <Link to="/setup">
-            <Button className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2">
-              <Zap className="h-4 w-4" /> Get Your Card Now
-            </Button>
-          </Link>
+          <p className="text-muted-foreground mb-4">Ready to get started? Or have questions first?</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link to="/setup">
+              <Button className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2">
+                <Zap className="h-4 w-4" /> Get Your Card Now
+              </Button>
+            </Link>
+            <Link to="/contact">
+              <Button variant="outline" className="gap-2 border-border">
+                Talk to Sales
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

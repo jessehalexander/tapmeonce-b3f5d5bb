@@ -83,24 +83,35 @@ export default function PricingSection() {
                   <p className="text-sm text-muted-foreground mt-1">{plan.tagline}</p>
                 </div>
 
-                <div className="mb-5">
-                  {plan.price === 0 ? (
-                    <div>
-                      <span className="font-display text-4xl font-bold">Free</span>
-                      <p className="text-xs text-muted-foreground mt-1">with every card purchase</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <span className="font-display text-4xl font-bold">₹{price}</span>
-                      <span className="text-sm text-muted-foreground">/mo</span>
-                      {billing === "yearly" && (
-                        <p className="text-xs text-green-400 mt-0.5">
-                          Billed ₹{plan.yearlyPrice}/year
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground/70 mt-1">{plan.cardPriceNote}</p>
-                    </div>
-                  )}
+                <div className="mb-5 space-y-3">
+                  {/* Subscription cost */}
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Subscription</p>
+                    {plan.price === 0 ? (
+                      <>
+                        <span className="font-display text-4xl font-bold">Free</span>
+                        <p className="text-xs text-muted-foreground mt-0.5">included with card</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-display text-4xl font-bold">₹{price}</span>
+                          <span className="text-sm text-muted-foreground">/mo</span>
+                        </div>
+                        {plan.id === 'business' && (
+                          <p className="text-xs text-amber-400 mt-0.5">for 5 users · +₹200/mo per extra user</p>
+                        )}
+                        {billing === "yearly" && (
+                          <p className="text-xs text-green-400 mt-0.5">Billed ₹{plan.yearlyPrice}/year</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {/* Card cost */}
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">NFC Card (one-time)</p>
+                    <p className="text-xs text-muted-foreground">{plan.cardPriceNote}</p>
+                  </div>
                 </div>
 
                 <ul className="space-y-2.5 mb-7 flex-1">

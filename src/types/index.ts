@@ -199,6 +199,7 @@ export interface SetupState {
   // Links
   links: Partial<SocialLink>[];
   whatsappSameAsPhone: boolean;
+  whatsappNumber?: string;
   // Shipping
   shippingAddress: Partial<ShippingAddress>;
   // Consent
