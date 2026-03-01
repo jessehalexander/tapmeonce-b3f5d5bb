@@ -180,11 +180,13 @@ export default function Setup() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: state.fullName,
-          designation: state.designation,
-          company: state.company,
-          isStudent: state.isStudent,
-          location: state.location,
+          full_name: state.fullName,
+          job_title: state.designation,
+          company: state.company || '',
+          bio_raw: state.bio || '',
+          vibe: state.isStudent ? 'modern_creative' : 'executive_bold',
+          plan: state.plan,
+          location: state.location || '',
         }),
         signal: controller.signal,
       });
