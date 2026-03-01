@@ -1,12 +1,26 @@
 // ─────────────────────────────────────────────
 // TapMeOnce — Talk to Sales / Contact Page
 // WhatsApp direct link + contact form → hello@tapmeonce.com
+// Email sending via EmailJS (no mail client required)
+//
+// SETUP INSTRUCTIONS (one-time):
+//   1. Sign up free at https://www.emailjs.com
+//   2. Add Email Service → connect Gmail (hello@tapmeonce.com)
+//   3. Create an Email Template with variables:
+//        {{from_name}}, {{from_email}}, {{message}}, {{to_email}}
+//      Set "To Email" in template to: hello@tapmeonce.com
+//   4. Copy your Service ID, Template ID, and Public Key
+//   5. Add to your .env file (or Lovable/Vercel environment variables):
+//        VITE_EMAILJS_SERVICE_ID=service_xxxxxxx
+//        VITE_EMAILJS_TEMPLATE_ID=template_xxxxxxx
+//        VITE_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxxxxxxxxx
 // ─────────────────────────────────────────────
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MessageCircle, Mail, Send, Loader2, CheckCircle } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,17 +29,21 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/TapMeOnce-Logo.png';
 
-const WHATSAPP_NUMBER = '919962734024'; // +91-9962734024
-const SALES_EMAIL = 'hello@tapmeonce.com';
+const WHATSAPP_NUMBER = '919962734024';
+const SALES_EMAIL     = 'hello@tapmeonce.com';
+
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID  as string;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string;
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY  as string;
 
 export default function Contact() {
   const { user, profile } = useAuth();
 
-  const [name, setName] = useState(profile?.full_name || '');
-  const [email, setEmail] = useState(profile?.email || user?.email || '');
-  const [message, setMessage] = useState('');
+  const [name,      setName]      = useState(profile?.full_name || '');
+  const [email,     setEmail]     = useState(profile?.email || user?.email || '');
+  const [message,   setMessage]   = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading,   setLoading]   = useState(false);
 
   const handleWhatsApp = () => {
     const text = encodeURIComponent(
@@ -34,28 +52,49 @@ export default function Contact() {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) {
+
+    const senderName  = user ? (profile?.full_name || user.email || 'User') : name.trim();
+    const senderEmail = user ? (profile?.email     || user.email || '')      : email.trim();
+
+    if (!senderName || !senderEmail || !message.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
-    if (!email.includes('@')) {
+    if (!senderEmail.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
     }
+
+    // EmailJS env vars not yet configured — fall back gracefully
+    if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+      toast.error('Email service is not configured yet. Please reach out via WhatsApp.');
+      return;
+    }
+
     setLoading(true);
-    // Use mailto: to open the user's email client pre-filled for hello@tapmeonce.com
-    const subject = encodeURIComponent(`TapMeOnce Inquiry from ${name}`);
-    const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
-    );
-    window.location.href = `mailto:${SALES_EMAIL}?subject=${subject}&body=${body}`;
-    // Show success state after a short delay
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name:  senderName,
+          from_email: senderEmail,
+          message:    message.trim(),
+          to_email:   SALES_EMAIL,
+        },
+        EMAILJS_PUBLIC_KEY
+      );
       setSubmitted(true);
-    }, 800);
+      setMessage('');
+      toast.success('Message sent! We\'ll reply within 24 hours.');
+    } catch (err) {
+      console.error('EmailJS error:', err);
+      toast.error('Failed to send. Please try WhatsApp instead.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,9 +172,9 @@ export default function Contact() {
                 className="text-center py-6"
               >
                 <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                <p className="font-semibold text-foreground">Your email app is open!</p>
+                <p className="font-semibold text-foreground">Message sent!</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  We've pre-filled everything. Just hit Send in your email app.
+                  We'll reply to <span className="text-foreground">{email || user?.email}</span> within 24 hours.
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
@@ -191,13 +230,13 @@ export default function Contact() {
                   className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2 font-semibold"
                 >
                   {loading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Opening email…</>
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
                   ) : (
                     <><Send className="h-4 w-4" /> Send Message</>
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  Opens your email app pre-filled to {SALES_EMAIL}
+                  Sent directly to {SALES_EMAIL} — no mail app needed
                 </p>
               </form>
             )}

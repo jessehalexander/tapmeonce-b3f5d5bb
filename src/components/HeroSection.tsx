@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, MapPin, BellRing, Layers } from "lucide-react";
 import nfcCard from "@/assets/nfc-card.png";
 
 /* ── Realistic app icon with label ── */
@@ -70,13 +71,13 @@ const HeroSection = () => {
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight">
             One Tap.
             <br />
-            <span className="text-gradient-gold">AI-Powered</span>
+            <span className="text-gradient-gold">Infinite</span>
             <br />
-            Identity.
+            Connections.
           </h1>
 
           <p className="max-w-md text-lg text-muted-foreground leading-relaxed">
-            More than a digital card. TapMeOnce uses AI to write your professional bio, capture leads from every visitor, and give you city-level analytics — all from a single tap of your NFC card.
+            TapMeOnce is a smart NFC card — hold it near any smartphone and your full digital profile opens instantly, no app needed. AI then writes your bio, captures leads from every visitor, and tracks city-level analytics automatically.
           </p>
 
           <div className="flex flex-wrap gap-4">
@@ -96,17 +97,17 @@ const HeroSection = () => {
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             {[
-              { emoji: "✦", label: "AI Bio Generator" },
-              { emoji: "📍", label: "City-Level Analytics" },
-              { emoji: "💬", label: "WhatsApp Lead Alerts" },
-              { emoji: "🔄", label: "Dual Profile Modes" },
-            ].map((chip) => (
+              { Icon: Sparkles,  label: "AI Bio Generator" },
+              { Icon: MapPin,    label: "City-Level Analytics" },
+              { Icon: BellRing,  label: "WhatsApp Lead Alerts" },
+              { Icon: Layers,    label: "Dual Profile Modes" },
+            ].map(({ Icon, label }) => (
               <span
-                key={chip.label}
+                key={label}
                 className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground"
               >
-                <span>{chip.emoji}</span>
-                {chip.label}
+                <Icon size={11} className="text-primary" />
+                {label}
               </span>
             ))}
           </div>

@@ -116,14 +116,15 @@ export default function PricingSection() {
 
                 <ul className="space-y-2.5 mb-7 flex-1">
                   {plan.features.slice(0, 7).map((feature) => (
-                    <li key={feature.label} className="flex items-center gap-2.5 text-sm">
+                    <li key={feature.label} className="flex items-start gap-2.5 text-sm min-w-0">
                       {feature.included ? (
-                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       ) : (
-                        <X className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+                        <X className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-0.5" />
                       )}
-                      <span className={cn(feature.included ? "text-secondary-foreground" : "text-muted-foreground/50")}>
+                      <span className={cn("leading-snug min-w-0", feature.included ? "text-secondary-foreground" : "text-muted-foreground/50")}>
                         {feature.label}
+                        {feature.note && <span className="text-xs text-muted-foreground block mt-0.5">{feature.note}</span>}
                       </span>
                     </li>
                   ))}

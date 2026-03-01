@@ -163,13 +163,13 @@ export default function Plans() {
 
                 <ul className="space-y-2.5 flex-1 mb-5">
                   {plan.features.slice(0, 8).map(f => (
-                    <li key={f.label} className="flex items-start gap-2.5 text-sm">
+                    <li key={f.label} className="flex items-start gap-2.5 text-sm min-w-0">
                       {f.included
                         ? <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         : <X className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />}
-                      <span className={f.included ? 'text-foreground' : 'text-muted-foreground/60'}>
+                      <span className={cn("leading-snug min-w-0", f.included ? 'text-foreground' : 'text-muted-foreground/60')}>
                         {f.label}
-                        {f.note && <span className="text-xs text-muted-foreground ml-1">({f.note})</span>}
+                        {f.note && <span className="text-xs text-muted-foreground block mt-0.5">{f.note}</span>}
                       </span>
                     </li>
                   ))}
@@ -198,8 +198,8 @@ export default function Plans() {
           </h2>
 
           {/* Table header */}
-          <div className="rounded-xl overflow-hidden border border-border">
-            <div className="grid grid-cols-4 gap-0 sticky top-14 z-20 bg-background border-b border-border shadow-sm">
+          <div className="rounded-xl border border-border">
+            <div className="grid grid-cols-4 gap-0 sticky top-14 z-20 bg-background border-b border-border shadow-sm rounded-t-xl overflow-hidden">
               <div className="px-4 py-3 text-sm text-muted-foreground">Feature</div>
               {['Free', 'Professional', 'Business'].map(p => (
                 <div key={p} className={cn('px-4 py-3 text-center text-sm font-semibold', p === 'Professional' ? 'text-primary' : '')}>
