@@ -82,7 +82,7 @@ const PrivacyTrustSection = () => (
         <p className="text-xs text-muted-foreground">
           Questions about your data?{" "}
           <a
-            href="https://wa.me/919962734024?text=Hi%20TapMeOnce%2C%20I%20have%20a%20question%20about%20data%20privacy."
+            href="https://api.whatsapp.com/send/?phone=%2B919962734024&text=Hi+TapMeOnce%2C+I+have+a+question+about+data+privacy.&type=phone_number&app_absent=0"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
