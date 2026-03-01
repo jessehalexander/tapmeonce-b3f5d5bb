@@ -76,10 +76,10 @@ export default function Dashboard() {
       getOrders(user.id),
       getReferrals(user.id),
     ]);
-    setLinks(linksRes.data || []);
+    setLinks((linksRes.data || []) as any);
     setLeads(leadsRes.data || []);
-    setCard(cardRes.data);
-    setOrders(ordersRes.data || []);
+    setCard(cardRes.data as any);
+    setOrders((ordersRes.data || []) as any);
     setReferrals(referralsRes.data || []);
 
     // Mock analytics data — replace with real Supabase query

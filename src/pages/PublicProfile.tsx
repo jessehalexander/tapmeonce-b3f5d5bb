@@ -126,13 +126,13 @@ export default function PublicProfile() {
       }
 
       const { data: linksData } = await getLinks(profileData.user_id);
-      const filteredLinks = (linksData || []).filter((l: SocialLink) =>
+      const filteredLinks = (linksData || []).filter((l: any) =>
         l.is_active && (l.mode === 'both' || l.mode === profileData.active_mode)
       );
 
       setProfile(profileData as UserProfile);
-      setLinks(filteredLinks);
-      setProfileMode(profileData.active_mode || 'business');
+      setLinks(filteredLinks as any);
+      setProfileMode((profileData.active_mode || 'business') as any);
 
       // Cache for offline
       localStorage.setItem(`tmo_profile_${username}`, JSON.stringify({
