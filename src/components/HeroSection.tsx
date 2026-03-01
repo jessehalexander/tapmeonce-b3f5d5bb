@@ -77,7 +77,7 @@ const HeroSection = () => {
           </h1>
 
           <p className="max-w-md text-lg text-muted-foreground leading-relaxed">
-            TapMeOnce is a smart NFC card — hold it near any smartphone and your full digital profile opens instantly, no app needed. AI then writes your bio, captures leads from every visitor, and tracks city-level analytics automatically.
+            Before your card even ships, AI writes your professional bio and builds your digital profile. Then hold the card near any smartphone — your profile opens instantly, no app needed. Every tap after that automatically captures leads and tracks where your network is growing.
           </p>
 
           <div className="flex flex-wrap gap-4">
