@@ -1,0 +1,1053 @@
+// ─────────────────────────────────────────────
+// TapMeOnce — Setup Wizard
+// 5-step optimized onboarding flow
+// ─────────────────────────────────────────────
+
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Check, ChevronLeft, ChevronRight, Loader2, User, Link2,
+  CreditCard, Zap, Building2, GraduationCap, Phone, Mail,
+  Globe, Instagram, Twitter, Linkedin, Youtube, Plus, Trash2,
+  Upload, Eye, EyeOff, AlertCircle, Sparkles, X, Info
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { PLANS, CARD_PRICES, PLAN_LIST, getPerCardCost } from '@/lib/plans';
+import { checkUsernameAvailable, signUp, supabase, uploadAvatar } from '@/lib/supabase';
+import { calculateOrderTotal, initiatePayment } from '@/lib/razorpay';
+import type { SetupState, PlanId, SocialPlatform } from '@/types';
+
+// ─── Step names ───────────────────────────────
+const STEPS = ['Plan', 'Account', 'Profile', 'Links', 'Checkout'];
+
+const INITIAL_STATE: SetupState = {
+  step: 1,
+  plan: 'free',
+  cardType: 'pvc_standard',
+  fullName: '',
+  username: '',
+  email: '',
+  password: '',
+  phone: '',
+  countryCode: '+91',
+  isStudent: false,
+  company: '',
+  avatarFile: undefined,
+  designation: '',
+  bio: '',
+  location: '',
+  links: [],
+  whatsappSameAsPhone: true,
+  shippingAddress: {},
+  leadGenConsent: false,
+  referralCode: '',
+};
+
+// ─── Platform helpers ─────────────────────────
+const SUGGESTED_PLATFORMS = [
+  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: '#0A66C2', placeholder: 'linkedin.com/in/yourname' },
+  { id: 'instagram', label: 'Instagram', icon: Instagram, color: '#E1306C', placeholder: 'instagram.com/yourname' },
+  { id: 'twitter', label: 'X / Twitter', icon: Twitter, color: '#1DA1F2', placeholder: 'x.com/yourname' },
+  { id: 'youtube', label: 'YouTube', icon: Youtube, color: '#FF0000', placeholder: 'youtube.com/@yourchannel' },
+  { id: 'website', label: 'Website', icon: Globe, color: '#22C55E', placeholder: 'yourwebsite.com' },
+  { id: 'github', label: 'GitHub', icon: ({ className }: any) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" />
+    </svg>
+  ), placeholder: 'github.com/yourname' },
+];
+
+// ─── N8N AI Bio webhook ───────────────────────
+const N8N_WEBHOOK = 'https://airtribe.app.n8n.cloud/webhook/tapmeonce-profile';
+
+// ─── Main Component ───────────────────────────
+export default function Setup() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [state, setState] = useState<SetupState>({
+    ...INITIAL_STATE,
+    plan: (searchParams.get('plan') as PlanId) || 'free',
+  });
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [pendingStep, setPendingStep] = useState<number | null>(null);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle');
+  const [showPassword, setShowPassword] = useState(false);
+  const [generatingBio, setGeneratingBio] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const update = useCallback(<K extends keyof SetupState>(key: K, val: SetupState[K]) => {
+    setState(prev => ({ ...prev, [key]: val }));
+  }, []);
+
+  // ─── Username check ───────────────────────
+  useEffect(() => {
+    if (!state.username || state.username.length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus('checking');
+    clearTimeout(usernameTimer.current);
+    usernameTimer.current = setTimeout(async () => {
+      const available = await checkUsernameAvailable(state.username);
+      setUsernameStatus(available ? 'available' : 'taken');
+    }, 600);
+    return () => clearTimeout(usernameTimer.current);
+  }, [state.username]);
+
+  // ─── Auto-suggest username from name ──────
+  useEffect(() => {
+    if (state.fullName && !state.username) {
+      const suggestion = state.fullName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 20);
+      update('username', suggestion);
+    }
+  }, [state.fullName]);
+
+  // ─── Navigation guards ────────────────────
+  const goToStep = (next: number) => {
+    // If going back from payment step, show exit confirmation
+    if (state.step === 5 && next < 5) {
+      setPendingStep(next);
+      setShowExitDialog(true);
+      return;
+    }
+    update('step', next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const canProceed = (): boolean => {
+    switch (state.step) {
+      case 1: return !!state.plan;
+      case 2:
+        return !!(
+          state.fullName.trim() &&
+          state.username.length >= 3 &&
+          usernameStatus === 'available' &&
+          state.email.includes('@') &&
+          state.password.length >= 8 &&
+          state.phone.replace(/\D/g, '').length >= 10
+        );
+      case 3: return !!(state.designation.trim());
+      case 4: return true; // Links are optional
+      case 5: return true;
+      default: return false;
+    }
+  };
+
+  // ─── AI Bio generation ────────────────────
+  const generateBio = async () => {
+    if (!state.designation && !state.company) {
+      toast.error('Add your designation first so AI can craft the perfect bio');
+      return;
+    }
+    setGeneratingBio(true);
+    try {
+      const res = await fetch(N8N_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: state.fullName,
+          designation: state.designation,
+          company: state.company,
+          isStudent: state.isStudent,
+          location: state.location,
+        }),
+      });
+      if (!res.ok) throw new Error('AI service unavailable');
+      const data = await res.json();
+      update('bio', data.bio || data.result || '');
+      toast.success('AI bio generated! Feel free to edit it.');
+    } catch {
+      toast.error('Bio generation failed. You can write it manually.');
+    } finally {
+      setGeneratingBio(false);
+    }
+  };
+
+  // ─── Avatar upload ────────────────────────
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    update('avatarFile', file);
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
+  };
+
+  // ─── Links management ─────────────────────
+  const addLink = (platform: string, placeholder = '') => {
+    const exists = state.links.find(l => l.platform === platform);
+    if (exists) return;
+    update('links', [
+      ...state.links,
+      { platform: platform as SocialPlatform, label: platform, url: '', sort_order: state.links.length, mode: 'both', is_active: true },
+    ]);
+  };
+
+  const updateLink = (idx: number, field: string, value: string) => {
+    const updated = [...state.links];
+    updated[idx] = { ...updated[idx], [field]: value };
+    update('links', updated);
+  };
+
+  const removeLink = (idx: number) => {
+    update('links', state.links.filter((_, i) => i !== idx));
+  };
+
+  // ─── Final submit ─────────────────────────
+  const handleSubmit = async () => {
+    if (state.plan === 'free') {
+      await createAccount();
+    } else {
+      await initiateRazorpayPayment();
+    }
+  };
+
+  const createAccount = async (paymentId?: string) => {
+    setIsSubmitting(true);
+    try {
+      // 1. Create Supabase auth user
+      const { data: authData, error: authError } = await signUp(state.email, state.password, {
+        full_name: state.fullName,
+      });
+      if (authError) throw authError;
+      const userId = authData.user?.id;
+      if (!userId) throw new Error('Account creation failed');
+
+      // 2. Upload avatar if provided
+      let avatarUrl: string | null = null;
+      if (state.avatarFile) {
+        avatarUrl = await uploadAvatar(userId, state.avatarFile);
+      }
+
+      // 3. Create profile
+      await supabase.from('profiles').insert({
+        user_id: userId,
+        username: state.username,
+        full_name: state.fullName,
+        email: state.email,
+        phone: state.phone,
+        country_code: state.countryCode,
+        avatar_url: avatarUrl,
+        designation: state.designation,
+        company: state.isStudent ? null : state.company,
+        institution: state.isStudent ? state.company : null,
+        is_student: state.isStudent,
+        bio: state.bio,
+        location: state.location,
+        plan: state.plan,
+        active_mode: 'business',
+        is_active: true,
+        lead_gen_consent: state.leadGenConsent,
+      });
+
+      // 4. Save links
+      if (state.links.length > 0) {
+        const linksToInsert = state.links
+          .filter(l => l.url?.trim())
+          .map((l, i) => ({
+            user_id: userId,
+            platform: l.platform,
+            label: l.label || l.platform,
+            url: l.url!,
+            sort_order: i,
+            mode: 'both',
+            is_active: true,
+          }));
+        if (linksToInsert.length) {
+          await supabase.from('links').insert(linksToInsert);
+        }
+      }
+
+      // 5. Add WhatsApp link if same as phone
+      if (state.whatsappSameAsPhone && state.phone) {
+        const waNumber = `${state.countryCode}${state.phone.replace(/\D/g, '')}`;
+        const waUrl = `https://wa.me/${waNumber.replace('+', '')}`;
+        await supabase.from('links').insert({
+          user_id: userId,
+          platform: 'whatsapp',
+          label: 'WhatsApp',
+          url: waUrl,
+          sort_order: 0,
+          mode: 'both',
+          is_active: true,
+        });
+      }
+
+      // 6. Create order record if paid
+      if (state.plan !== 'free') {
+        const totals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
+        await supabase.from('orders').insert({
+          user_id: userId,
+          plan: state.plan,
+          card_type: state.cardType,
+          card_price: totals.cardPrice,
+          subscription_price: totals.subscriptionPrice,
+          total_amount: totals.total,
+          razorpay_payment_id: paymentId,
+          status: 'placed',
+          shipping_address: state.shippingAddress,
+        });
+      }
+
+      // 7. Create placeholder NFC card record
+      await supabase.from('nfc_cards').insert({
+        user_id: userId,
+        card_type: state.cardType,
+        status: 'pending',
+      });
+
+      // 8. Apply referral if provided
+      if (state.referralCode) {
+        await supabase.from('referral_uses').insert({
+          code: state.referralCode,
+          used_by: userId,
+        });
+      }
+
+      toast.success('Account created! Welcome to TapMeOnce 🎉');
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const initiateRazorpayPayment = async () => {
+    setIsSubmitting(true);
+    const totals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
+    try {
+      // Create Razorpay order via your backend/Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          amount: totals.total * 100, // paise
+          plan: state.plan,
+          billing_cycle: billingCycle,
+          email: state.email,
+          name: state.fullName,
+        },
+      });
+      if (error) throw error;
+
+      await initiatePayment({
+        orderId: data.order_id,
+        amount: totals.total * 100,
+        currency: 'INR',
+        name: state.fullName,
+        email: state.email,
+        phone: `${state.countryCode}${state.phone}`,
+        plan: state.plan,
+        description: `TapMeOnce ${PLANS[state.plan].name} Plan`,
+        onSuccess: async (paymentId) => {
+          await createAccount(paymentId);
+        },
+        onFailure: (err) => {
+          toast.error('Payment failed. Please try again.');
+          setIsSubmitting(false);
+        },
+      });
+    } catch (err: any) {
+      toast.error('Could not initiate payment. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const orderTotals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
+  const hasNoLinks = state.links.filter(l => l.url?.trim()).length === 0;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ─── Top bar ─── */}
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
+        <div className="container h-14 flex items-center justify-between">
+          <a href="/" className="text-sm font-semibold text-gradient-gold">TapMeOnce</a>
+          <StepIndicator current={state.step} total={STEPS.length} labels={STEPS} />
+          <div className="w-24 text-right text-xs text-muted-foreground">
+            Step {state.step} of {STEPS.length}
+          </div>
+        </div>
+      </header>
+
+      {/* ─── Content ─── */}
+      <main className="flex-1 container max-w-2xl py-8 px-4">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={state.step}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.25 }}
+          >
+            {state.step === 1 && <StepPlan state={state} update={update} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
+            {state.step === 2 && <StepAccount state={state} update={update} usernameStatus={usernameStatus} showPassword={showPassword} setShowPassword={setShowPassword} />}
+            {state.step === 3 && <StepProfile state={state} update={update} avatarPreview={avatarPreview} fileInputRef={fileInputRef} handleAvatarChange={handleAvatarChange} generatingBio={generatingBio} generateBio={generateBio} />}
+            {state.step === 4 && <StepLinks state={state} update={update} addLink={addLink} updateLink={updateLink} removeLink={removeLink} />}
+            {state.step === 5 && <StepCheckout state={state} update={update} orderTotals={orderTotals} billingCycle={billingCycle} setBillingCycle={setBillingCycle} />}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* ─── Navigation ─── */}
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+          {state.step > 1 ? (
+            <Button variant="ghost" onClick={() => goToStep(state.step - 1)} className="gap-2">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+              <ChevronLeft className="h-4 w-4" /> Home
+            </Button>
+          )}
+
+          {state.step < STEPS.length ? (
+            <Button
+              onClick={() => goToStep(state.step + 1)}
+              disabled={!canProceed()}
+              className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2"
+            >
+              Continue <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !state.shippingAddress.name}
+              className="bg-gradient-gold text-primary-foreground hover:opacity-90 gap-2 min-w-32"
+            >
+              {isSubmitting ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Processing…</>
+              ) : state.plan === 'free' ? (
+                <>Create Account <Check className="h-4 w-4" /></>
+              ) : (
+                <>Pay ₹{orderTotals.total} <CreditCard className="h-4 w-4" /></>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* No-links warning */}
+        {state.step === 4 && hasNoLinks && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex gap-3 items-start text-sm"
+          >
+            <Info className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+            <span className="text-amber-300">
+              <strong>Heads up:</strong> According to LinkedIn research, profiles with at least one social link
+              get <strong>10x more engagement</strong> than those without. Add a link to boost your impact!
+            </span>
+          </motion.div>
+        )}
+      </main>
+
+      {/* ─── Exit confirmation ─── */}
+      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exit payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your payment hasn't been completed yet. Your plan details will be saved but you'll need to come back to finish.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowExitDialog(false)}>Stay</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowExitDialog(false);
+              if (pendingStep !== null) update('step', pendingStep);
+            }}>Yes, go back</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step 1: Plan Selection
+// ─────────────────────────────────────────────
+function StepPlan({ state, update, billingCycle, setBillingCycle }: any) {
+  return (
+    <div>
+      <h1 className="font-display text-3xl font-bold mb-1">Choose your plan</h1>
+      <p className="text-muted-foreground mb-6">You can upgrade anytime. <a href="/plans" className="text-primary underline-offset-2 hover:underline" target="_blank">Compare all features →</a></p>
+
+      {/* Billing toggle */}
+      <div className="flex items-center gap-3 mb-6 justify-center">
+        <span className={cn('text-sm', billingCycle === 'monthly' ? 'text-foreground' : 'text-muted-foreground')}>Monthly</span>
+        <Switch checked={billingCycle === 'yearly'} onCheckedChange={v => setBillingCycle(v ? 'yearly' : 'monthly')} />
+        <span className={cn('text-sm', billingCycle === 'yearly' ? 'text-foreground' : 'text-muted-foreground')}>
+          Yearly <Badge variant="outline" className="ml-1 text-xs text-green-400 border-green-500/30">Save ~17%</Badge>
+        </span>
+      </div>
+
+      <div className="grid gap-4">
+        {PLAN_LIST.map(plan => {
+          const price = billingCycle === 'yearly' && plan.price > 0
+            ? Math.round(plan.yearlyPrice / 12)
+            : plan.price;
+          const isSelected = state.plan === plan.id;
+          return (
+            <motion.div
+              key={plan.id}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => update('plan', plan.id)}
+              className={cn(
+                'relative rounded-xl p-5 cursor-pointer border-2 transition-all',
+                isSelected
+                  ? 'border-primary bg-primary/5 glow-gold'
+                  : 'border-border glass-card hover:border-primary/40'
+              )}
+            >
+              {plan.highlighted && (
+                <span className="absolute -top-3 left-4 bg-gradient-gold text-primary-foreground text-xs font-bold px-3 py-0.5 rounded-full">
+                  Most Popular
+                </span>
+              )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-display font-bold text-lg">{plan.name}</span>
+                    {isSelected && <Check className="h-4 w-4 text-primary" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">{plan.tagline}</p>
+                  <p className="text-xs text-muted-foreground/70">{plan.cardPriceNote}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  {plan.price === 0 ? (
+                    <span className="font-display text-2xl font-bold">Free</span>
+                  ) : (
+                    <>
+                      <span className="font-display text-2xl font-bold">₹{price}</span>
+                      <span className="text-xs text-muted-foreground">/mo</span>
+                    </>
+                  )}
+                  {billingCycle === 'yearly' && plan.price > 0 && (
+                    <p className="text-xs text-green-400 mt-0.5">billed ₹{plan.yearlyPrice}/yr</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Card type selection */}
+      <div className="mt-6">
+        <Label className="text-sm font-medium mb-3 block">Choose your card type</Label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { id: 'pvc_standard', name: 'PVC Standard', price: CARD_PRICES.pvc_standard, note: 'Credit card size, durable' },
+            { id: 'metallic_premium', name: 'Metal Premium', price: CARD_PRICES.metallic_premium, note: 'Premium finish, makes an impression' },
+          ].map(card => (
+            <div
+              key={card.id}
+              onClick={() => update('cardType', card.id)}
+              className={cn(
+                'rounded-lg p-4 cursor-pointer border-2 transition-all',
+                state.cardType === card.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/40'
+              )}
+            >
+              <div className="font-semibold text-sm">{card.name}</div>
+              <div className="font-display text-lg font-bold mt-1">₹{card.price}</div>
+              <div className="text-xs text-muted-foreground mt-1">{card.note}</div>
+              {state.cardType === card.id && <Check className="h-4 w-4 text-primary mt-2" />}
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">* Card is a one-time purchase. Subscription is for the plan features.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step 2: Account
+// ─────────────────────────────────────────────
+function StepAccount({ state, update, usernameStatus, showPassword, setShowPassword }: any) {
+  const COUNTRY_CODES = ['+91', '+1', '+44', '+61', '+65', '+971'];
+
+  return (
+    <div>
+      <h1 className="font-display text-3xl font-bold mb-1">Create your account</h1>
+      <p className="text-muted-foreground mb-6">This is how you'll log in. Takes 30 seconds.</p>
+
+      <div className="space-y-4">
+        <div>
+          <Label>Your full name *</Label>
+          <Input
+            value={state.fullName}
+            onChange={e => update('fullName', e.target.value)}
+            placeholder="Ravi Kumar"
+            className="mt-1.5"
+            autoFocus
+          />
+        </div>
+
+        <div>
+          <Label>Username (your profile link) *</Label>
+          <div className="relative mt-1.5">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">tapmeonce.com/p/</span>
+            <Input
+              value={state.username}
+              onChange={e => update('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              placeholder="ravikumar"
+              className="pl-[154px]"
+            />
+            {usernameStatus === 'checking' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            {usernameStatus === 'available' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />}
+            {usernameStatus === 'taken' && <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />}
+          </div>
+          {usernameStatus === 'taken' && (
+            <p className="text-xs text-destructive mt-1">This username is taken. Try something like {state.username}_ or {state.username}1</p>
+          )}
+        </div>
+
+        <div>
+          <Label>Email *</Label>
+          <Input
+            type="email"
+            value={state.email}
+            onChange={e => update('email', e.target.value)}
+            placeholder="ravi@example.com"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <Label>Password *</Label>
+          <div className="relative mt-1.5">
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              value={state.password}
+              onChange={e => update('password', e.target.value)}
+              placeholder="Min 8 characters"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {state.password && state.password.length < 8 && (
+            <p className="text-xs text-muted-foreground mt-1">At least 8 characters</p>
+          )}
+        </div>
+
+        <div>
+          <Label>Phone number *</Label>
+          <div className="flex gap-2 mt-1.5">
+            <select
+              value={state.countryCode}
+              onChange={e => update('countryCode', e.target.value)}
+              className="w-24 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
+            >
+              {COUNTRY_CODES.map(code => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+            <Input
+              type="tel"
+              value={state.phone}
+              onChange={e => update('phone', e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="9876543210"
+              maxLength={10}
+              className="flex-1"
+            />
+          </div>
+        </div>
+
+        {/* Student / Working toggle */}
+        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-secondary/40">
+          <div className="flex items-center gap-2">
+            {state.isStudent ? <GraduationCap className="h-4 w-4 text-primary" /> : <Building2 className="h-4 w-4 text-primary" />}
+            <span className="text-sm font-medium">{state.isStudent ? 'Student' : 'Working Professional'}</span>
+          </div>
+          <Switch
+            checked={state.isStudent}
+            onCheckedChange={v => update('isStudent', v)}
+          />
+        </div>
+
+        <div>
+          <Label>{state.isStudent ? 'Institution name' : 'Company / Organisation'}</Label>
+          <Input
+            value={state.company}
+            onChange={e => update('company', e.target.value)}
+            placeholder={state.isStudent ? 'IIT Delhi, BITS Pilani…' : 'Accenture, My Startup…'}
+            className="mt-1.5"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step 3: Profile
+// ─────────────────────────────────────────────
+function StepProfile({ state, update, avatarPreview, fileInputRef, handleAvatarChange, generatingBio, generateBio }: any) {
+  const isPro = state.plan !== 'free';
+  return (
+    <div>
+      <h1 className="font-display text-3xl font-bold mb-1">Your profile</h1>
+      <p className="text-muted-foreground mb-6">This is what people see when they tap your card.</p>
+
+      {/* Avatar */}
+      <div className="flex items-center gap-4 mb-6">
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="w-20 h-20 rounded-full border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-secondary/40"
+        >
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <Upload className="h-6 w-6 text-muted-foreground" />
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-medium">Profile photo</p>
+          <p className="text-xs text-muted-foreground">Click to upload. JPG or PNG, max 5MB.</p>
+          <button onClick={() => fileInputRef.current?.click()} className="text-xs text-primary mt-1 hover:underline">
+            {avatarPreview ? 'Change photo' : 'Upload photo'}
+          </button>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label>Your title / designation *</Label>
+          <Input
+            value={state.designation}
+            onChange={e => update('designation', e.target.value)}
+            placeholder="Product Designer, Sales Manager, CA…"
+            className="mt-1.5"
+            autoFocus
+          />
+        </div>
+
+        <div>
+          <Label>Location <span className="text-muted-foreground">(optional)</span></Label>
+          <Input
+            value={state.location}
+            onChange={e => update('location', e.target.value)}
+            placeholder="Mumbai, India"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <Label>Bio <span className="text-muted-foreground">(optional)</span></Label>
+            {isPro && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateBio}
+                disabled={generatingBio}
+                className="h-7 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+              >
+                {generatingBio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {generatingBio ? 'Generating…' : 'AI Generate'}
+              </Button>
+            )}
+          </div>
+          <Textarea
+            value={state.bio}
+            onChange={e => update('bio', e.target.value)}
+            placeholder="A short intro about yourself…"
+            className="resize-none"
+            rows={3}
+          />
+          {!isPro && (
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              AI Bio generation is available on Professional & Business plans
+            </p>
+          )}
+        </div>
+
+        {/* Lead gen consent (Pro+) */}
+        {isPro && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/40">
+            <Checkbox
+              id="leadConsent"
+              checked={state.leadGenConsent}
+              onCheckedChange={v => update('leadGenConsent', v)}
+              className="mt-0.5"
+            />
+            <label htmlFor="leadConsent" className="text-sm text-muted-foreground cursor-pointer">
+              I give TapMeOnce permission to enable the lead capture form on my profile, allowing visitors to voluntarily share their contact details with me.
+            </label>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step 4: Links
+// ─────────────────────────────────────────────
+function StepLinks({ state, update, addLink, updateLink, removeLink }: any) {
+  const existingPlatforms = state.links.map((l: any) => l.platform);
+
+  return (
+    <div>
+      <h1 className="font-display text-3xl font-bold mb-1">Your links</h1>
+      <p className="text-muted-foreground mb-6">Add all your socials, websites, and contact methods.</p>
+
+      {/* WhatsApp from phone */}
+      <div className="mb-4 p-4 rounded-lg bg-green-500/5 border border-green-500/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <svg className="h-4 w-4 text-green-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium">WhatsApp</p>
+              <p className="text-xs text-muted-foreground">{state.phone || 'No phone entered'}</p>
+            </div>
+          </div>
+          <Switch
+            checked={state.whatsappSameAsPhone}
+            onCheckedChange={v => update('whatsappSameAsPhone', v)}
+            disabled={!state.phone}
+          />
+        </div>
+        {state.whatsappSameAsPhone && (
+          <p className="text-xs text-green-400 mt-2">✓ Using your phone number ({state.countryCode}{state.phone})</p>
+        )}
+      </div>
+
+      {/* Suggested platforms */}
+      <div className="mb-4">
+        <p className="text-xs text-muted-foreground mb-2">Quick add:</p>
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_PLATFORMS.filter(p => !existingPlatforms.includes(p.id)).map(p => (
+            <button
+              key={p.id}
+              onClick={() => addLink(p.id)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:border-primary/60 hover:bg-primary/5 transition-all"
+            >
+              <Plus className="h-3 w-3" /> {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Added links */}
+      <div className="space-y-3">
+        {state.links.map((link: any, i: number) => {
+          const platform = SUGGESTED_PLATFORMS.find(p => p.id === link.platform);
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2"
+            >
+              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0 text-xs font-medium text-muted-foreground uppercase">
+                {link.platform?.slice(0, 2)}
+              </div>
+              <Input
+                value={link.url}
+                onChange={e => updateLink(i, 'url', e.target.value)}
+                placeholder={platform?.placeholder || 'https://...'}
+                className="flex-1 text-sm"
+              />
+              <button
+                onClick={() => removeLink(i)}
+                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Custom link */}
+      <button
+        onClick={() => addLink('custom')}
+        className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
+      >
+        <Plus className="h-4 w-4" /> Add custom link
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step 5: Checkout
+// ─────────────────────────────────────────────
+function StepCheckout({ state, update, orderTotals, billingCycle, setBillingCycle }: any) {
+  const plan = PLANS[state.plan];
+  const isPaid = state.plan !== 'free';
+  const proSavings = state.plan === 'professional' ? PLANS.business.price - PLANS.professional.price : 0;
+
+  return (
+    <div>
+      <h1 className="font-display text-3xl font-bold mb-1">
+        {isPaid ? 'Review & Pay' : 'Almost done!'}
+      </h1>
+      <p className="text-muted-foreground mb-6">
+        {isPaid ? 'Review your order and complete payment.' : 'Confirm your details and create your account.'}
+      </p>
+
+      {/* Order summary */}
+      <div className="rounded-xl border border-border p-4 mb-5">
+        <h3 className="font-semibold text-sm mb-3">Order Summary</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{state.cardType === 'pvc_standard' ? 'PVC Standard Card' : 'Metal Premium Card'}</span>
+            <span>₹{orderTotals.cardPrice}</span>
+          </div>
+          {isPaid && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{plan.name} Plan ({orderTotals.subscriptionLabel})</span>
+              <span>₹{orderTotals.subscriptionPrice}</span>
+            </div>
+          )}
+          {orderTotals.savings && (
+            <div className="flex justify-between text-green-400">
+              <span>Annual savings</span>
+              <span>-₹{orderTotals.savings}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold border-t border-border pt-2 mt-2">
+            <span>Total today</span>
+            <span className="text-primary">₹{orderTotals.total}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Upgrade prompt for Professional */}
+      {state.plan === 'professional' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-5 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-amber-700/5 border border-amber-500/30"
+        >
+          <div className="flex items-start gap-3">
+            <Zap className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold">Upgrade to Business for your whole team</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Business plan covers 5 people at ₹200/mo per card — that's 33% cheaper than individual plans.
+                Add custom domain + team analytics.
+              </p>
+              <button
+                onClick={() => update('plan', 'business')}
+                className="mt-2 text-xs text-amber-400 hover:underline font-medium"
+              >
+                Switch to Business Plan →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Shipping address */}
+      <div className="mb-5">
+        <h3 className="font-semibold text-sm mb-3">Delivery address</h3>
+        <div className="space-y-3">
+          {[
+            { key: 'name', label: 'Full name', placeholder: 'Ravi Kumar' },
+            { key: 'line1', label: 'Address line 1', placeholder: 'Flat / House No, Street' },
+            { key: 'line2', label: 'Address line 2 (optional)', placeholder: 'Area / Landmark' },
+            { key: 'city', label: 'City', placeholder: 'Mumbai' },
+            { key: 'state', label: 'State', placeholder: 'Maharashtra' },
+            { key: 'pincode', label: 'PIN code', placeholder: '400001' },
+          ].map(field => (
+            <div key={field.key}>
+              <Label className="text-xs">{field.label}</Label>
+              <Input
+                value={(state.shippingAddress as any)[field.key] || ''}
+                onChange={e => update('shippingAddress', { ...state.shippingAddress, [field.key]: e.target.value })}
+                placeholder={field.placeholder}
+                className="mt-1 text-sm"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Referral code */}
+      <div className="mb-5">
+        <Label className="text-xs">Referral code (optional)</Label>
+        <Input
+          value={state.referralCode}
+          onChange={e => update('referralCode', e.target.value.toUpperCase())}
+          placeholder="TMO-XXXXXX"
+          className="mt-1 text-sm"
+        />
+      </div>
+
+      {/* Autopay consent for paid plans */}
+      {isPaid && (
+        <div className="p-3 rounded-lg bg-secondary/40 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground mb-1">Subscription auto-renews {billingCycle === 'yearly' ? 'annually' : 'monthly'}</p>
+          <p>By proceeding, you agree to recurring charges of ₹{orderTotals.subscriptionPrice} + GST until you cancel. You can cancel anytime from your dashboard.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Step Indicator
+// ─────────────────────────────────────────────
+function StepIndicator({ current, total, labels }: { current: number; total: number; labels: string[] }) {
+  return (
+    <div className="flex items-center gap-1">
+      {labels.map((label, i) => {
+        const step = i + 1;
+        const done = step < current;
+        const active = step === current;
+        return (
+          <div key={label} className="flex items-center gap-1">
+            <div className={cn(
+              'flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-all',
+              done ? 'bg-primary text-primary-foreground' :
+              active ? 'bg-primary/20 text-primary border border-primary' :
+              'bg-secondary text-muted-foreground'
+            )}>
+              {done ? <Check className="h-3 w-3" /> : step}
+            </div>
+            <span className={cn('text-xs hidden sm:block', active ? 'text-foreground' : 'text-muted-foreground')}>
+              {label}
+            </span>
+            {i < total - 1 && <div className="w-4 h-px bg-border mx-1 hidden sm:block" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
