@@ -33,9 +33,12 @@ export default function Login() {
     setLoading(true);
     const { error } = await signIn(email, password);
     if (error) {
-      toast.error(error.message === 'Invalid login credentials'
-        ? 'Incorrect email or password'
-        : error.message
+      const msg = error.message;
+      toast.error(
+        msg === 'Invalid login credentials' ? 'Incorrect email or password' :
+        msg === 'Failed to fetch' || msg.includes('fetch') ? 'Connection issue — please check your internet and try again' :
+        msg === 'Email not confirmed' ? 'Please confirm your email address first — check your inbox' :
+        msg
       );
     } else {
       toast.success('Welcome back!');
