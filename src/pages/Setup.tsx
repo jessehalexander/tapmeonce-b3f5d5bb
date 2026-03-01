@@ -27,7 +27,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { PLANS, CARD_PRICES, PLAN_LIST, getPerCardCost } from '@/lib/plans';
-import { checkUsernameAvailable, signUp, supabase, uploadAvatar } from '@/lib/supabase';
+import { checkUsernameAvailable, signUp, supabase, uploadAvatar, isSupabaseConfigured } from '@/lib/supabase';
 import { calculateOrderTotal, initiatePayment } from '@/lib/razorpay';
 import type { SetupState, PlanId, SocialPlatform } from '@/types';
 
@@ -216,14 +216,20 @@ export default function Setup() {
 
   // ─── Final submit ─────────────────────────
   const handleSubmit = async () => {
-    if (state.plan === 'free') {
-      await createAccount();
-    } else {
+    // Always use Razorpay if there is any amount to collect (e.g. card purchase on free plan)
+    const totals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
+    if (totals.total > 0) {
       await initiateRazorpayPayment();
+    } else {
+      await createAccount();
     }
   };
 
   const createAccount = async (paymentId?: string) => {
+    if (!isSupabaseConfigured) {
+      toast.error('⚙️ Backend not connected yet. Add your Supabase URL and key in Lovable → Project Settings → Environment Variables, then redeploy.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       // 1. Create Supabase auth user
@@ -335,6 +341,14 @@ export default function Setup() {
   };
 
   const initiateRazorpayPayment = async () => {
+    if (!isSupabaseConfigured) {
+      toast.error('⚙️ Backend not connected yet. Add your Supabase URL and key in Lovable → Project Settings → Environment Variables, then redeploy.');
+      return;
+    }
+    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+      toast.error('⚙️ Razorpay not connected yet. Add your VITE_RAZORPAY_KEY_ID in Lovable → Project Settings → Environment Variables, then redeploy.');
+      return;
+    }
     setIsSubmitting(true);
     const totals = calculateOrderTotal(state.plan, state.cardType, billingCycle);
     try {
